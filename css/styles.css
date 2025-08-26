@@ -374,3 +374,81 @@ body {
   width: 80%;
   background-color: white;
 }
+
+/* Bouqallates page styles */
+.bouqallate-container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.bouqallate-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.bouqallate-title {
+  font-size: 2em;
+  margin-bottom: 10px;
+}
+
+.bouqallate-image {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.bouqallate-image img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+
+.bouqallate-actions {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.bouqallate-actions button {
+  padding: 10px 20px;
+  background-color: #c1272d;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1.1em;
+}
+
+.bouqallate-section {
+  margin-bottom: 20px;
+}
+
+.bouqallate-section h3 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+  border-bottom: 2px solid #c1272d;
+  padding-bottom: 5px;
+}
+
+.bouqallate-text {
+  padding: 15px;
+  border-radius: 5px;
+  background-color: #f0f0f0;
+}
+
+.bouqallate-text.arabic-text {
+  text-align: right;
+  font-size: 1.2em;
+}
+
+.bouqallate-text.phonetic-text {
+  font-style: italic;
+}
+
+.bouqallate-author {
+  text-align: right;
+  font-style: italic;
+  color: #666;
+}

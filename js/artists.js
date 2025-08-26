@@ -32,12 +32,20 @@ async function loadArtists(page = 1) {
 function updateArtistsPagination() {
   const paginationContainer = document.getElementById('artists-pagination');
   paginationContainer.innerHTML = '';
+
+  // Bouton précédent
   const prevButton = document.createElement('button');
   prevButton.textContent = 'Précédent';
-  prevButton.onclick = () => changeArtistsPage(currentPage - 1);
+  prevButton.onclick = () => changeArtistsPage(Math.max(1, currentPage - 10));
   prevButton.disabled = currentPage === 1;
   paginationContainer.appendChild(prevButton);
-  for (let i = 1; i <= totalPages; i++) {
+
+  // Calculer la plage de pages à afficher
+  let startPage = Math.floor((currentPage - 1) / 10) * 10 + 1;
+  let endPage = Math.min(startPage + 9, totalPages);
+
+  // Ajouter les boutons de page
+  for (let i = startPage; i <= endPage; i++) {
     const pageButton = document.createElement('button');
     pageButton.textContent = i;
     pageButton.onclick = () => changeArtistsPage(i);
@@ -46,10 +54,12 @@ function updateArtistsPagination() {
     }
     paginationContainer.appendChild(pageButton);
   }
+
+  // Bouton suivant
   const nextButton = document.createElement('button');
   nextButton.textContent = 'Suivant';
-  nextButton.onclick = () => changeArtistsPage(currentPage + 1);
-  nextButton.disabled = currentPage === totalPages;
+  nextButton.onclick = () => changeArtistsPage(Math.min(totalPages, currentPage + 10));
+  nextButton.disabled = currentPage > totalPages - 10;
   paginationContainer.appendChild(nextButton);
 }
 
@@ -66,21 +76,57 @@ function displayArtists() {
   currentData.forEach(artist => {
     const artistCard = document.createElement('div');
     artistCard.className = 'artist-card';
+	artistCard.setAttribute('data-id', artist.id);
     const isLiked = localStorage.getItem(`artist_${artist.id}_liked`) === 'true';
     artistCard.innerHTML = `
       <img src="http://localhost/${artist.image}" alt="${artist.artiste}" width="150" height="150">
       <h2>${artist.artiste}</h2>
-      <p>${artist.bio.substring(0, 100)}...</p>
+      <!-- <p>${artist.bio.substring(0, 100)}...</p>-->
       <button onclick="showArtistDetails(${artist.id})">En savoir plus</button>
-      <button class="like-button ${isLiked ? 'liked' : ''}" onclick="toggleLike('artistes', ${artist.id}, 'artists')">
-  ${isLiked ? 'Je n\'aime plus' : 'J\'aime'}
-</button>
+       <p>Vues: <span class="views-count">${artist.views}</span>${isLiked ? ' <span style="color: red;">❤️</span>' : ''}</p>
+      <button onclick="updateViews('artistes', ${artist.id})">Like</button>
     `;
     artistsList.appendChild(artistCard);
   });
 }
 
 async function showArtistDetails(artistId) {
+  try {
+    const response = await fetch(`${ARTISTS_API}/artistes?id=${artistId}`);
+    const artist = await response.json();
+    const resultsContainer = document.getElementById('profile-container');
+
+    resultsContainer.innerHTML = `
+
+        <div class="profile-image">
+            <img src="http://localhost/${artist.image}" alt="${artist.artiste}">
+        </div>
+        <div class="profile-details">
+            <h2>${artist.artiste}</h2>
+			<h3>Biographie</h3>
+			 <div>${artist.bio}</div>
+                <div class="skill">
+    <p class="job-title">${artist.views}</p>
+            <p class="location">${artist.date}</p>
+                </div>
+<h3>Chansons populaires:</h3>
+       <div class="songs-list">
+              ${artist.chansons.map(song => `<p class="song-item">${song.titre} (${song.date})</p>`).join('')}
+            </div>
+           <!-- <button class="contact-btn ">
+
+			</button>-->
+        </div>
+
+    `;
+  } catch (error) {
+    console.error('Error fetching artist details:', error);
+    resultsContainer.innerHTML = '<p>Une erreur est survenue lors du chargement des détails de l\'artiste.</p>';
+  }
+}
+
+
+/*async function showArtistDetails(artistId) {
   try {
     const response = await fetch(`${ARTISTS_API}/artistes?id=${artistId}`);
     const artist = await response.json();
@@ -100,45 +146,38 @@ async function showArtistDetails(artistId) {
   } catch (error) {
     console.error('Error loading artist details:', error);
   }
-}
+}*/
 
 // Fonction pour gérer le clic sur le bouton "like"
-async function toggleLike(type, id, section) {
-  const key = `${type}_${id}_liked`;
-  const isLiked = localStorage.getItem(key) === 'true';
-
+async function updateViews(type, id) {
   try {
-    // Mettre à jour les vues en appelant l'API PHP
-    const viewsResponse = await fetch('http://localhost/api/index.php/updateViews.php', {
+    const response = await fetch(`${API_BASE_URL}/updateViews.php`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ type: type, id: id })
+      body: JSON.stringify({ type, id })
     });
-    const viewsData = await viewsResponse.json();
 
-    if (viewsData.success) {
-      // Mettre à jour le statut du like
-      localStorage.setItem(key, (!isLiked).toString());
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        // Mettre à jour le nombre de vues et ajouter le cœur rouge
+        const viewsElement = document.querySelector(`[data-id="${id}"] .views-count`);
+        if (viewsElement) {
+          viewsElement.innerHTML = `${data.views} <span style="color: red;">❤️</span>`;
+        }
 
-      // Actualiser la page ou les résultats de recherche
-      if (section === 'artists') {
-        await loadArtists(currentPage);
-      } else if (section === 'songs') {
-        await loadSongs(currentPage);
-      } else if (section === 'dernieres') {
-        await loadLatestSongs();
-      } else if (section === 'top10') {
-        await loadTop10Songs();
-      } else if (section === 'categories') {
-        await loadCategorySongs();
-      } else {
-        displaySearchResults();
+        // Afficher le message de remerciement
+        const messageDiv = document.getElementById('like-message');
+        messageDiv.textContent = 'Merci d\'avoir liké!';
+        messageDiv.style.display = 'block';
+        setTimeout(() => {
+          messageDiv.style.display = 'none';
+        }, 60000); // Le message disparaît après 1 minute
+
+        console.log(`Artiste liké avec succès! (Vues: ${data.views})`);
       }
-
-      const action = isLiked ? 'retiré des favoris' : 'ajouté aux favoris';
-      alert(`${type === 'artist' ? 'Artiste' : 'Chanson'} ${action} avec succès! (Vues: ${viewsData.views})`);
     } else {
       throw new Error('Failed to update views');
     }
@@ -146,27 +185,4 @@ async function toggleLike(type, id, section) {
     console.error('Error updating views:', error);
     alert('Une erreur est survenue lors de la mise à jour des vues.');
   }
-
-  try {
-    // Mettre à jour le like en utilisant l'API d'origine
-    const response = await fetch(`${API_BASE_URL}/updateViews`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        type: type,
-        id: id,
-        action: isLiked ? 'unlike' : 'like'
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update like status');
-    }
-  } catch (error) {
-    console.error('Error updating like status:', error);
-    alert('Une erreur est survenue lors de la mise à jour du statut de like.');
-  }
 }
-
